@@ -4,7 +4,7 @@ from call_nemotron import query_model
 app = Flask(__name__)
 
 
-app.route("/")
+app.route("/queryllm", methods=["GET"])
 def run_nemotron():
 
     try:
@@ -16,3 +16,7 @@ def run_nemotron():
     
     except Exception as e:
         return jsonify({"error":"error occured while processing the request","details":str(e)}), 500
+    
+
+if __name__ == "__main__":
+    app.run(port=5000,debug=True)
