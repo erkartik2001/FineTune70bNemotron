@@ -3,7 +3,9 @@ import torch
 
 model_name = "nvidia/Llama-3.1-Nemotron-70B-Instruct"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16)
+
+
 
 def query_model(input_text):
     inputs = tokenizer(input_text, return_tensors="pt")
@@ -20,3 +22,5 @@ while True:
         break
     response = query_model(input_text)
     print("Response:", response)
+
+
