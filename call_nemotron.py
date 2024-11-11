@@ -13,24 +13,64 @@
 # generated_text = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
 # print(generated_text)
 
-from transformers import pipeline
+# from transformers import pipeline
+# import torch
+
+# model_id = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
+# pipe = pipeline(
+#     "text-generation",
+#     model=model_id,
+#     model_kwargs={"torch_dtype": torch.bfloat16},
+#     device="cuda",
+# )
+
+# messages = [
+#     {"role": "user", "content": "Who are you? Please, answer in pirate-speak."},
+# ]
+# outputs = pipe(
+#     messages,
+#     max_new_tokens=256,
+#     do_sample=False,
+# )
+# assistant_response = outputs[0]["generated_text"][-1]["content"]
+# print(assistant_response)
+
+
 import torch
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 
 model_id = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
+
+# Load model and tokenizer with mixed precision
+model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+# Define the pipeline
 pipe = pipeline(
     "text-generation",
-    model=model_id,
-    model_kwargs={"torch_dtype": torch.bfloat16},
-    device="cuda",
+    model=model,
+    tokenizer=tokenizer,
+    device=0,  # Ensure it uses the correct GPU
 )
+
+def query_model(messages):
+    try:
+        torch.cuda.empty_cache()  # Clear cache before generation
+        outputs = pipe(
+            messages,
+            max_new_tokens=128,  # Reduced from 256 to 128
+            do_sample=False,
+        )
+        assistant_response = outputs[0]["generated_text"][-1]["content"]
+        print(assistant_response)
+    except torch.cuda.OutOfMemoryError:
+        print("CUDA out of memory. Please try reducing max_new_tokens or batch size.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 messages = [
     {"role": "user", "content": "Who are you? Please, answer in pirate-speak."},
 ]
-outputs = pipe(
-    messages,
-    max_new_tokens=256,
-    do_sample=False,
-)
-assistant_response = outputs[0]["generated_text"][-1]["content"]
-print(assistant_response)
+
+query_model(messages)
+
