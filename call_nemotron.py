@@ -1,18 +1,21 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from bitsandbytes import Int4Params
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, pipeline
 
 model_name = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+quantization_config = BitsAndBytesConfig(load_in_4bit=True)
 
-model = AutoModelForCausalLM.from_pretrained(model_name, quantize='int4', device_map='auto')
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    quantization_config=quantization_config
+)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 pipe = pipeline(
     "text-generation",
     model=model,
     tokenizer=tokenizer,
-    device=0,  
+    device=0  
 )
 
 def query_model(input_text):
@@ -21,7 +24,7 @@ def query_model(input_text):
         messages = [{"role": "user", "content": input_text}]
         outputs = pipe(
             messages,
-            max_new_tokens=128, 
+            max_new_tokens=128,  
             do_sample=False,
         )
         assistant_response = outputs[0]["generated_text"][-1]["content"]
