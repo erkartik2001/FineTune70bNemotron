@@ -1,22 +1,32 @@
 from flask import Flask, request, jsonify
-from call_nemotron import query_model
+from llm_model import LLMModel
+from flask_httpauth import HTTPBasicAuth
 
 app = Flask(__name__)
+auth = HTTPBasicAuth()
 
+users = {
+    "admin": "42robots"
+}
 
-app.route("/queryllm", methods=["GET"])
-def run_nemotron():
+@auth.get_password
+def get_pw(username):
+    if username in users:
+        return users.get(username)
+    return None
 
-    try:
-        data = request.get_json()
-        query = data.get("query")
-        response = query_model(input_text=query)
+llm_model = LLMModel("nvidia/Llama-3.1-Nemotron-70B-Instruct-HF")
+llm_model.load_model()
 
-        return jsonify({"response":response}), 200
+@app.route('/api/call70b', methods=['POST'])
+@auth.login_required
+def predict():
+    data = request.json
+    prompt = data.get('prompt', '')
     
-    except Exception as e:
-        return jsonify({"error":"error occured while processing the request","details":str(e)}), 500
+    response_text = llm_model.query_model(prompt)
     
+    return jsonify({"response": response_text})
 
-if __name__ == "__main__":
-    app.run(port=5000,debug=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
