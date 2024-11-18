@@ -29,7 +29,7 @@ class LLMModel:
             
             outputs = self.pipe(
                 messages,
-                max_new_tokens=128,  
+                max_new_tokens=1000,  
                 do_sample=False,    
             )
             
