@@ -41,6 +41,6 @@ class LLMModel:
         except Exception as e:
             return f"An error occurred: {e}"
 
-model_name = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
-llm_model = LLMModel(model_name)
-llm_model.load_model()  
+# model_name = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
+# llm_model = LLMModel(model_name)
+# llm_model.load_model()  
