@@ -18,10 +18,9 @@ def get_pw(username):
 
 
 model_name = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
-cache_dir = "./llama-70B"
 token = "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"
 
-llama = LlamaModel(model_name, cache_dir, token)
+llama = LlamaModel(model_name, token)
 llama.load_model()
 
 @app.route('/api/call70b', methods=['POST','GET'])
