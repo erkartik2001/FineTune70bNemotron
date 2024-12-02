@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from llm_model import LLMModel
+from llm_model import LlamaModel
 from flask_httpauth import HTTPBasicAuth
 import os
 
@@ -16,8 +16,13 @@ def get_pw(username):
         return users.get(username)
     return None
 
-llm_model = LLMModel("nvidia/Llama-3.1-Nemotron-70B-Instruct-HF")
-llm_model.load_model(model_path="./fine_tuned_model")
+
+model_name = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
+cache_dir = "./llama-70B"
+token = "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"
+
+llama = LlamaModel(model_name, cache_dir, token)
+llama.load_model()
 
 @app.route('/api/call70b', methods=['POST','GET'])
 @auth.login_required
@@ -25,7 +30,7 @@ def predict():
     data = request.json
     prompt = data.get('prompt', '')
     
-    response_text = llm_model.query_model(prompt)
+    response_text = llama.generate_text(prompt)
     
     return jsonify({"response": response_text})
 
