@@ -5,7 +5,7 @@ import os
 import torch
 
 class LlamaModel:
-    def __init__(self, model_name, cache_dir, token):
+    def __init__(self, model_name, token):
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,16 +18,13 @@ class LlamaModel:
         )
 
         self.model_name = model_name
-        self.cache_dir = cache_dir
         self.token = token
         self.tokenizer = None
         self.model = None
 
     def load_model(self):
-        os.makedirs(self.cache_dir, exist_ok=True)
-
         print("Loading tokenizer...")
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.token, cache_dir=self.cache_dir)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=self.token)
 
         if self.tokenizer.pad_token is None:
             print("Adding a padding token to the tokenizer...")
@@ -38,8 +35,7 @@ class LlamaModel:
             self.model_name,
             device_map="auto",
             quantization_config=self.bnb_config,
-            token=self.token,
-            cache_dir=self.cache_dir
+            token=self.token
         )
 
         self.model.resize_token_embeddings(len(self.tokenizer))
@@ -145,10 +141,9 @@ class LlamaModel:
 
 if __name__ == "__main__":
     model_name = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
-    cache_dir = "./llama-70B"
     token = "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"
 
-    llama = LlamaModel(model_name, cache_dir, token)
+    llama = LlamaModel(model_name, token)
     llama.load_model()
 
     large_text = """
