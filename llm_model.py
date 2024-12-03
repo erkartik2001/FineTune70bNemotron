@@ -1,6 +1,7 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
 from datasets import Dataset
 from transformers import BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model
 import os
 import torch
 
@@ -39,41 +40,17 @@ class LlamaModel:
         )
 
         self.model.resize_token_embeddings(len(self.tokenizer))
-
         self.model.config.pad_token_id = self.tokenizer.pad_token_id
 
     def process_text(self, large_text, chunk_size=512):
-        """
-        Splits a large text string into smaller chunks suitable for fine-tuning.
-
-        Args:
-            large_text (str): The large input text to process.
-            chunk_size (int): Maximum token length for each chunk.
-
-        Returns:
-            list: A list of dictionaries containing text chunks.
-        """
         print("Processing large text into fine-tuning chunks...")
         tokens = self.tokenizer(large_text, return_tensors="pt", truncation=False).input_ids[0]
         chunks = [tokens[i:i + chunk_size] for i in range(0, len(tokens), chunk_size)]
-        processed_data = [
-            {"text": self.tokenizer.decode(chunk, skip_special_tokens=True)}
-            for chunk in chunks
-        ]
+        processed_data = [{"text": self.tokenizer.decode(chunk, skip_special_tokens=True)} for chunk in chunks]
         print(f"Processed {len(processed_data)} chunks.")
         return processed_data
 
     def fine_tune(self, training_data, output_dir="./fine_tuned_model", epochs=3, batch_size=4, learning_rate=5e-5):
-        """
-        Fine-tunes the model on the provided training data.
-
-        Args:
-            training_data (list): List of dictionaries with "text" as the key for fine-tuning.
-            output_dir (str): Directory to save the fine-tuned model.
-            epochs (int): Number of training epochs.
-            batch_size (int): Batch size for training.
-            learning_rate (float): Learning rate for the optimizer.
-        """
         if self.tokenizer is None or self.model is None:
             raise ValueError("Model and tokenizer must be loaded before fine-tuning. Call load_model() first.")
 
@@ -84,6 +61,10 @@ class LlamaModel:
             return self.tokenizer(example["text"], padding="max_length", truncation=True, max_length=512)
 
         tokenized_dataset = dataset.map(tokenize_function, batched=True)
+
+        print("Configuring LoRA...")
+        lora_config = LoraConfig(r=8, lora_alpha=16, target_modules=["q_proj", "v_proj"], lora_dropout=0.1, bias="none")
+        self.model = get_peft_model(self.model, lora_config)
 
         print("Setting up training arguments...")
         training_args = TrainingArguments(
@@ -114,18 +95,13 @@ class LlamaModel:
         self.tokenizer.save_pretrained(output_dir)
         print(f"Fine-tuned model saved at {output_dir}")
 
+    def load_fine_tuned_model(self, model_dir="./fine_tuned_llama"):
+        print("Loading fine-tuned model...")
+        self.model = AutoModelForCausalLM.from_pretrained(model_dir)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_dir)
+        self.model.to(self.device)
+
     def generate_text(self, prompt, max_length=100, num_return_sequences=1):
-        """
-        Generates text based on the provided prompt.
-
-        Args:
-            prompt (str): Input prompt to generate text.
-            max_length (int): Maximum length of the generated text.
-            num_return_sequences (int): Number of sequences to generate.
-
-        Returns:
-            list: List of generated text sequences.
-        """
         if self.tokenizer is None or self.model is None:
             raise ValueError("Model and tokenizer must be loaded before generating text. Call load_model() first.")
 
@@ -152,12 +128,14 @@ if __name__ == "__main__":
     Here is some additional text to make it even longer.
     """
 
-#     # Process the large text into chunks
-#     training_data = llama.process_text(large_text, chunk_size=512)
+    # Process the large text into chunks
+    training_data = llama.process_text(large_text, chunk_size=512)
 
-#     # Fine-tune the model
-#     llama.fine_tune(training_data, output_dir="./fine_tuned_llama")
+    # Fine-tune the model
+    llama.fine_tune(training_data, output_dir="./fine_tuned_llama")
 
+    # Generate text
+    llama.load_fine_tuned_model("./fine_tuned_llama")
     generated_text = llama.generate_text("The fine-tuned model excels at", max_length=50)
     print("\nGenerated Text:")
     print(generated_text)
