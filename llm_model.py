@@ -141,7 +141,7 @@ class LlamaModel:
 
 if __name__ == "__main__":
     model_name = "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"
-    token = "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"
+    token = "your-hugging-face-token"
 
     llama = LlamaModel(model_name, token)
     llama.load_model()
